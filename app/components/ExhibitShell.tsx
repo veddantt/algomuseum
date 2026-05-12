@@ -8,6 +8,7 @@ import {
   Terminal, ShieldCheck, ArrowRight
 } from "lucide-react";
 import { Exhibit } from "@/lib/data";
+import { GlassPanel } from "./ui/GlassPanel";
 
 interface SidebarItem {
   label: string;
@@ -62,6 +63,7 @@ const DustParticles = () => {
             delay: Math.random() * 5
           }}
           className="absolute w-1 h-1 bg-white rounded-full blur-[1px]"
+          style={{ willChange: 'transform, opacity' }}
         />
       ))}
     </div>
@@ -85,18 +87,18 @@ export default function ExhibitShell({
 }: ExhibitShellProps) {
   const [expandedCard, setExpandedCard] = useState<number | null>(null);
   return (
-    <div className="flex-1 flex flex-col min-h-screen bg-[#050505] text-neutral-200 relative overflow-x-hidden font-sans scroll-smooth">
+    <div className="flex-1 flex flex-col min-h-screen bg-[#020202] text-neutral-200 relative overflow-x-hidden font-sans scroll-smooth">
       {/* Shared Ambient Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-grid opacity-[0.05]" />
-        <div className="absolute inset-0 bg-noise" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px] opacity-30" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(2,2,2,1)_80%)]" />
         <DustParticles />
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/5 blur-[120px] rounded-full" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/[0.04] blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/[0.03] blur-[120px] rounded-full" />
       </div>
 
       {/* Header / Breadcrumbs */}
-      <header className="border-b border-white/5 bg-black/40 backdrop-blur-2xl sticky top-0 z-50">
+      <header className="border-b border-white/5 bg-[#020202]/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/museum" className="p-2 -ml-2 rounded-lg hover:bg-white/5 transition-colors text-neutral-500 hover:text-white">
@@ -104,7 +106,7 @@ export default function ExhibitShell({
             </Link>
             <div className="w-px h-4 bg-white/10" />
             <nav className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
-              <Link href="/" className="text-neutral-500 hover:text-white transition-colors">Museum</Link>
+              <Link href="/" className="text-neutral-500 hover:text-white transition-colors">Archive</Link>
               <ChevronRight className="w-3 h-3 text-neutral-700" />
               <span className="text-neutral-500">{exhibit.category}</span>
               <ChevronRight className="w-3 h-3 text-neutral-700" />
@@ -170,15 +172,8 @@ export default function ExhibitShell({
           </div>
 
           {/* HUD / Logic Area */}
-          <div className={`${sidebar ? "lg:col-span-12 xl:col-span-3" : "lg:col-span-4"} flex flex-col gap-6`}>
-            {hud && (
-              <div className="bg-black/40 border border-white/10 rounded-2xl p-6 backdrop-blur-md">
-                <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-6 flex items-center gap-2">
-                  <Terminal className="w-3 h-3 text-blue-500" /> System HUD
-                </h3>
-                {hud}
-              </div>
-            )}
+          <div className={`${sidebar ? "lg:col-span-12 xl:col-span-3" : "lg:col-span-4"} flex flex-col`}>
+            {hud}
             {logic}
           </div>
         </section>
@@ -187,7 +182,7 @@ export default function ExhibitShell({
         {useCases && (
           <section className="flex flex-col gap-12 pt-12 border-t border-white/5">
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="flex flex-col items-center text-center gap-4">
-              <h2 className="text-4xl font-black tracking-tighter text-white uppercase">Real World Systems</h2>
+              <h2 className="text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white to-neutral-500 uppercase">Real World Systems</h2>
               <p className="text-neutral-500 max-w-xl">How {exhibit.algorithm} powers {exhibit.realWorldSystem.toLowerCase()} in production environments.</p>
             </motion.div>
 
@@ -203,7 +198,7 @@ export default function ExhibitShell({
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.1, layout: { type: "spring", stiffness: 300, damping: 30 } }}
                     onClick={() => setExpandedCard(isExpanded ? null : i)}
-                    className={`cursor-pointer rounded-3xl p-8 transition-all duration-300 group border ${
+                    className={`cursor-pointer rounded-[24px] p-8 transition-all duration-300 group border ${
                       isExpanded
                         ? "bg-blue-500/[0.04] border-blue-500/20 shadow-[0_0_40px_rgba(59,130,246,0.06)]"
                         : "bg-white/[0.02] border-white/5 hover:bg-white/[0.04] hover:border-white/10"
@@ -212,8 +207,8 @@ export default function ExhibitShell({
                     <motion.div layout="position">
                       <div className="flex items-start justify-between mb-6">
                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${
-                          isExpanded ? "bg-blue-500/20 border-blue-500/30" : "bg-blue-500/10 border-blue-500/20"
-                        } border text-blue-400`}>
+                          isExpanded ? "bg-blue-500/20 border-blue-500/30 text-blue-400" : "bg-white/5 border-white/10 text-neutral-400 group-hover:text-blue-400 group-hover:bg-blue-500/10 group-hover:border-blue-500/20"
+                        } border`}>
                           <useCase.icon className="w-6 h-6" />
                         </div>
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
@@ -223,7 +218,7 @@ export default function ExhibitShell({
                         </div>
                       </div>
                       <h3 className={`text-xl font-bold mb-3 transition-colors duration-300 ${
-                        isExpanded ? "text-blue-400" : "text-white"
+                        isExpanded ? "text-blue-400" : "text-white group-hover:text-neutral-300"
                       }`}>{useCase.title}</h3>
                       <p className="text-sm text-neutral-400 leading-relaxed mb-4">{useCase.explanation}</p>
                     </motion.div>
@@ -248,9 +243,11 @@ export default function ExhibitShell({
 
                     <motion.div layout="position" className="pt-4 border-t border-white/5 flex items-start gap-2">
                       <ArrowRight className={`w-3 h-3 mt-1 shrink-0 transition-colors duration-300 ${
-                        isExpanded ? "text-blue-400" : "text-blue-500"
+                        isExpanded ? "text-blue-400" : "text-neutral-600 group-hover:text-blue-500"
                       }`} />
-                      <p className="text-[11px] font-bold text-blue-400/80 uppercase tracking-tight">{useCase.impact}</p>
+                      <p className={`text-[11px] font-bold uppercase tracking-tight transition-colors ${
+                         isExpanded ? "text-blue-400" : "text-neutral-500 group-hover:text-blue-400"
+                      }`}>{useCase.impact}</p>
                     </motion.div>
                   </motion.div>
                 );
@@ -261,25 +258,25 @@ export default function ExhibitShell({
             {scaleVisualization}
 
             {takeaway && (
-              <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="relative overflow-hidden">
-                <div className="absolute inset-0 rounded-[32px] pointer-events-none" style={{ background: "radial-gradient(ellipse at 30% 50%, rgba(59,130,246,0.08) 0%, transparent 70%)" }} />
-                <div className="relative rounded-[32px] border border-white/[0.07] bg-white/[0.02] backdrop-blur-xl p-10 md:p-14">
-                  <div className="absolute left-0 top-8 bottom-8 w-[3px] rounded-full bg-blue-500/40" />
-                  <div className="pl-6">
+              <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="relative overflow-hidden mt-8">
+                <GlassPanel intensity="medium" className="p-10 md:p-14">
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_50%,rgba(59,130,246,0.08)_0%,transparent_70%)] pointer-events-none" />
+                  <div className="absolute left-0 top-8 bottom-8 w-1 rounded-full bg-blue-500/40" />
+                  <div className="pl-6 relative z-10">
                     <div className="flex items-center gap-2 mb-6 text-blue-400">
                       <ShieldCheck className="w-4 h-4" />
-                      <span className="text-[9px] font-black uppercase tracking-[0.25em] opacity-70">Engineering Takeaway</span>
+                      <span className="text-[9px] font-black uppercase tracking-[0.25em] opacity-80">Engineering Takeaway</span>
                     </div>
                     <blockquote className="text-xl md:text-2xl font-bold text-white leading-snug tracking-tight mb-5">
                       &ldquo;{takeaway}&rdquo;
                     </blockquote>
                     {takeawaySub && (
-                      <p className="text-sm text-neutral-500 leading-relaxed max-w-2xl">
+                      <p className="text-sm text-neutral-400 leading-relaxed max-w-2xl font-light">
                         {takeawaySub}
                       </p>
                     )}
                   </div>
-                </div>
+                </GlassPanel>
               </motion.div>
             )}
           </section>
