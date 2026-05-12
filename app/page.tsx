@@ -2,77 +2,88 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Library, Map, ArrowUpDown, Truck, ThumbsUp, ArrowRight } from "lucide-react";
-import { exhibits } from "@/lib/data";
-
-const iconMap: Record<string, React.ReactNode> = {
-  Library: <Library className="w-6 h-6 text-neutral-400 group-hover:text-white transition-colors" />,
-  Map: <Map className="w-6 h-6 text-neutral-400 group-hover:text-white transition-colors" />,
-  ArrowUpDown: <ArrowUpDown className="w-6 h-6 text-neutral-400 group-hover:text-white transition-colors" />,
-  Truck: <Truck className="w-6 h-6 text-neutral-400 group-hover:text-white transition-colors" />,
-  ThumbsUp: <ThumbsUp className="w-6 h-6 text-neutral-400 group-hover:text-white transition-colors" />,
-};
+import { Sparkles, ArrowRight, Layers, Cpu, Globe, Compass } from "lucide-react";
 
 export default function Home() {
   return (
-    <main className="flex-1 flex flex-col items-center justify-center p-8 md:p-24 relative overflow-hidden">
-      {/* Background gradients */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/10 blur-[120px] rounded-full pointer-events-none" />
+    <main className="flex-1 flex flex-col items-center justify-center min-h-screen relative overflow-hidden bg-[#030303]">
+      {/* Cinematic Background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[10%] left-[10%] w-[60%] h-[60%] bg-blue-600/[0.07] blur-[160px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[10%] right-[10%] w-[60%] h-[60%] bg-purple-600/[0.07] blur-[160px] rounded-full animate-pulse delay-700" />
+        <div className="absolute inset-0 bg-grid opacity-[0.04]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(3,3,3,1)_80%)]" />
+      </div>
 
-      <div className="max-w-5xl w-full relative z-10">
+      <div className="relative z-10 max-w-5xl w-full px-6 flex flex-col items-center text-center">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-center mb-16 space-y-4"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+          className="mb-8"
         >
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-neutral-500">
-            AlgoMuseum
+          <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/[0.03] border border-white/10 backdrop-blur-md mb-8">
+            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-400">Exhibition Open</span>
+          </div>
+          
+          <h1 className="text-6xl md:text-9xl font-black tracking-tighter text-white uppercase italic leading-[0.8] mb-6">
+            ALGO<span className="text-neutral-700 not-italic tracking-[-0.1em] px-2">MUSEUM</span>
           </h1>
-          <p className="text-lg md:text-xl text-neutral-400 max-w-2xl mx-auto font-light">
-            Algorithms explained through everyday systems.
+          
+          <p className="text-lg md:text-2xl text-neutral-500 max-w-2xl mx-auto font-medium leading-relaxed tracking-tight">
+            An architectural deep-dive into the <br/> <span className="text-white">algorithms that run our world.</span>
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {exhibits.map((exhibit, idx) => (
-            <motion.div
-              key={exhibit.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: idx * 0.1, ease: "easeOut" }}
-            >
-              <Link href={`/exhibits/${exhibit.slug}`} className="group block h-full">
-                <div className="h-full border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] p-6 rounded-2xl flex flex-col justify-between transition-all duration-300 hover:border-white/10 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/0 to-white/[0.02] opacity-0 group-hover:opacity-100 transition-opacity" />
-                  
-                  <div>
-                    <div className="mb-4 inline-flex items-center justify-center p-3 rounded-xl bg-white/5 group-hover:bg-white/10 transition-colors">
-                      {iconMap[exhibit.iconName]}
-                    </div>
-                    <h2 className="text-xl font-medium mb-1 group-hover:text-white text-neutral-200 transition-colors">
-                      {exhibit.title}
-                    </h2>
-                    <h3 className="text-sm text-neutral-400 font-mono mb-4">
-                      {exhibit.algorithm}
-                    </h3>
-                    <p className="text-sm text-neutral-500 leading-relaxed mb-6">
-                      {exhibit.description}
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mt-auto">
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${exhibit.isAvailable ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-neutral-800 text-neutral-400 border border-white/5'}`}>
-                      {exhibit.isAvailable ? 'Explore' : 'Coming Soon'}
-                    </span>
-                    <ArrowRight className="w-4 h-4 text-neutral-600 group-hover:text-white transition-colors transform group-hover:translate-x-1" />
-                  </div>
-                </div>
-              </Link>
-            </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.5 }}
+          className="flex flex-col sm:flex-row items-center gap-6"
+        >
+          <Link 
+            href="/museum" 
+            className="group relative px-10 py-5 rounded-2xl bg-white text-black font-black uppercase tracking-tighter transition-all hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.2)]"
+          >
+            <div className="flex items-center gap-3">
+              Enter The Museum
+              <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+            </div>
+          </Link>
+          
+          <Link 
+            href="#about" 
+            className="px-10 py-5 rounded-2xl bg-white/5 border border-white/10 text-white font-black uppercase tracking-tighter transition-all hover:bg-white/10"
+          >
+            Platform Specs
+          </Link>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+          className="mt-24 grid grid-cols-2 md:grid-cols-4 gap-12 border-t border-white/5 pt-12"
+        >
+          {[
+            { label: "Interactive Nodes", value: "05", icon: Layers },
+            { label: "Real-time Simulation", value: "Engine 1.0", icon: Cpu },
+            { label: "Global Reach", value: "Distributed", icon: Globe },
+            { label: "Design System", value: "Titanium", icon: Compass }
+          ].map((item, i) => (
+            <div key={i} className="flex flex-col items-center gap-2">
+              <item.icon className="w-5 h-5 text-neutral-700" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-neutral-600">{item.label}</p>
+              <p className="text-sm font-bold text-neutral-400">{item.value}</p>
+            </div>
           ))}
-        </div>
+        </motion.div>
+      </div>
+
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-30">
+        <span className="text-[8px] font-black uppercase tracking-[0.5em] text-neutral-500">Scroll to Explore</span>
+        <div className="w-px h-12 bg-gradient-to-b from-neutral-500 to-transparent" />
       </div>
     </main>
   );
