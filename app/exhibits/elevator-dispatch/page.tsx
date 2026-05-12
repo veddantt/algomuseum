@@ -15,6 +15,8 @@ import { ElevatorState, ElevatorAction, ElevatorAlgorithm, ElevatorStepResponse 
 import { defaultState } from "@/lib/simulations/elevator/defaultState";
 import { GlassPanel } from "@/app/components/ui/GlassPanel";
 import { Badge } from "@/app/components/ui/Badge";
+import { useTraceReplay } from "@/lib/hooks/useTraceReplay";
+import TraceReplayPanel from "./TraceReplayPanel";
 
 // --- Sub-components ---
 
@@ -72,6 +74,10 @@ export default function ElevatorDispatchExhibit() {
   
   const FLOORS = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
 
+  // Trace Replay
+  const traceReplay = useTraceReplay();
+  const displayState = traceReplay.isReplaying && traceReplay.replayState ? traceReplay.replayState : engineState;
+
   // Keep ref synced for closures
   useEffect(() => {
     engineStateRef.current = engineState;
@@ -105,6 +111,7 @@ export default function ElevatorDispatchExhibit() {
     setIsProcessing(true);
     
     try {
+      const prevState = structuredClone(engineStateRef.current);
       const res = await fetch("/api/exhibits/elevator-dispatch/step", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -120,6 +127,16 @@ export default function ElevatorDispatchExhibit() {
       const data: ElevatorStepResponse = await res.json();
       setEngineState(data.state);
       appendLogs(data.logs);
+
+      // Record trace event with semantic label
+      const label =
+        action.type === "REQUEST_FLOOR" ? `Request Floor ${action.payload.floor}` :
+        action.type === "STEP" ? `Dispatch → Floor ${data.state.targetFloor ?? "?"}` :
+        action.type === "ARRIVE_AT_TARGET" ? `Arrived Floor ${prevState.targetFloor ?? "?"}` :
+        action.type === "SET_ALGORITHM" ? `Switch to ${action.payload.algorithm.toUpperCase()}` :
+        action.type;
+      traceReplay.recordEvent(action.type, label, prevState, data.state, data.logs, data.metrics);
+
       return data.state;
       
     } catch (e) {
@@ -177,15 +194,18 @@ export default function ElevatorDispatchExhibit() {
 
   const handleReset = async () => {
     if (isProcessingRef.current) return;
+    traceReplay.exitReplay();
     isProcessingRef.current = true;
     setIsProcessing(true);
     try {
+      const prevState = structuredClone(engineStateRef.current);
       const res = await fetch("/api/exhibits/elevator-dispatch/reset", { method: "POST" });
       const data = await res.json();
       setEngineState(data);
       setIsMoving(false);
       setLogs([{ id: Date.now(), text: "SYSTEM RESET", type: 'warn' }]);
       setActiveLines([]);
+      traceReplay.recordEvent("RESET", "System Reset", prevState, data, [], null);
     } finally {
       isProcessingRef.current = false;
       setIsProcessing(false);
@@ -216,9 +236,9 @@ export default function ElevatorDispatchExhibit() {
               <button
                 key={algo}
                 onClick={() => handleSetAlgorithm(algo)}
-                disabled={isProcessing}
+                disabled={isProcessing || traceReplay.isReplaying}
                 className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-colors disabled:opacity-50 ${
-                  engineState.algorithm === algo ? 'bg-blue-500 text-white shadow-md' : 'text-neutral-400 hover:text-white'
+                  displayState.algorithm === algo ? 'bg-blue-500 text-white shadow-md' : 'text-neutral-400 hover:text-white'
                 }`}
               >
                 {algo}
@@ -226,11 +246,11 @@ export default function ElevatorDispatchExhibit() {
             ))}
           </div>
           <div className="w-px h-6 bg-white/10" />
-          <button onClick={addRandomRequest} disabled={isProcessing} className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-white/5 hover:bg-white/10 text-neutral-300 transition-colors disabled:opacity-50">
+          <button onClick={addRandomRequest} disabled={isProcessing || traceReplay.isReplaying} className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-white/5 hover:bg-white/10 text-neutral-300 transition-colors disabled:opacity-50">
             Random
           </button>
           <div className="w-px h-6 bg-white/10" />
-          <button onClick={handleReset} disabled={isProcessing} className="p-2 rounded-lg hover:bg-white/5 text-neutral-500 hover:text-blue-400 transition-colors disabled:opacity-50">
+          <button onClick={handleReset} disabled={isProcessing || traceReplay.isReplaying} className="p-2 rounded-lg hover:bg-white/5 text-neutral-500 hover:text-blue-400 transition-colors disabled:opacity-50">
             <RotateCcw className="w-4 h-4" />
           </button>
         </div>
@@ -251,19 +271,19 @@ export default function ElevatorDispatchExhibit() {
             <div className="absolute inset-0 rounded-2xl pointer-events-none z-0">
               <motion.div 
                 className="absolute left-0 w-full h-48 bg-blue-500/15 blur-[60px]"
-                animate={{ bottom: `${((engineState.targetFloor || engineState.currentFloor) - 1) / 9 * 100}%`, marginBottom: '-96px' }}
+                animate={{ bottom: `${((displayState.targetFloor || displayState.currentFloor) - 1) / 9 * 100}%`, marginBottom: '-96px' }}
                 transition={{ type: "spring", stiffness: 45, damping: 25 }}
               />
               <div className="absolute inset-0 flex flex-col justify-between">
                 {FLOORS.map(floor => (
-                  <div key={floor} className={`w-full h-[1px] transition-colors duration-700 ${engineState.currentFloor === floor ? 'bg-blue-500/40 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-white/[0.03]'}`} />
+                  <div key={floor} className={`w-full h-[1px] transition-colors duration-700 ${displayState.currentFloor === floor ? 'bg-blue-500/40 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-white/[0.03]'}`} />
                 ))}
               </div>
               {isMoving && (
                 <motion.div 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  style={{ bottom: `${((engineState.currentFloor) - 1) / 9 * 100}%`, marginBottom: '-64px' }}
+                  style={{ bottom: `${((displayState.currentFloor) - 1) / 9 * 100}%`, marginBottom: '-64px' }}
                   className="absolute left-0 right-0 h-32 bg-gradient-to-t from-transparent to-blue-500/30 blur-xl"
                 />
               )}
@@ -271,7 +291,7 @@ export default function ElevatorDispatchExhibit() {
 
             <div className="absolute right-12 inset-y-0 flex flex-col justify-between py-6 pointer-events-none z-10">
               {FLOORS.map(floor => (
-                <span key={floor} className={`text-[10px] font-mono font-bold transition-colors duration-500 ${(isMoving ? engineState.targetFloor === floor : engineState.currentFloor === floor) ? 'text-blue-400' : 'text-neutral-700'}`}>
+                <span key={floor} className={`text-[10px] font-mono font-bold transition-colors duration-500 ${(isMoving ? displayState.targetFloor === floor : displayState.currentFloor === floor) ? 'text-blue-400' : 'text-neutral-700'}`}>
                   {floor.toString().padStart(2, '0')}
                 </span>
               ))}
@@ -280,10 +300,10 @@ export default function ElevatorDispatchExhibit() {
             <motion.div 
               className={`absolute left-1/2 w-48 h-16 rounded-xl backdrop-blur-md flex items-center justify-between px-4 z-20 transition-all duration-700 ${isMoving ? 'bg-blue-500/15 border-blue-400/40 shadow-[0_0_50px_rgba(59,130,246,0.25)]' : 'bg-[#0a0a0a]/90 border-white/10 shadow-[0_0_20px_rgba(0,0,0,0.5)]'} border pointer-events-none`}
               style={{ translateX: "-50%" }}
-              animate={{ bottom: `${((engineState.targetFloor || engineState.currentFloor) - 1) / 9 * 100}%`, marginBottom: (engineState.targetFloor || engineState.currentFloor) === 1 ? '24px' : (engineState.targetFloor || engineState.currentFloor) === 10 ? '-24px' : '0px' }}
+              animate={{ bottom: `${((displayState.targetFloor || displayState.currentFloor) - 1) / 9 * 100}%`, marginBottom: (displayState.targetFloor || displayState.currentFloor) === 1 ? '24px' : (displayState.targetFloor || displayState.currentFloor) === 10 ? '-24px' : '0px' }}
               transition={{ type: "spring", stiffness: 40, damping: 25, mass: 1.5 }}
               onAnimationComplete={() => {
-                if (isMoving && engineState.targetFloor) {
+                if (isMoving && !traceReplay.isReplaying && engineState.targetFloor) {
                   handleArrival();
                 }
               }}
@@ -294,7 +314,7 @@ export default function ElevatorDispatchExhibit() {
               </div>
               <div className="flex-1 flex justify-center items-center">
                  <div className={`w-16 h-10 rounded-lg border ${isMoving ? 'border-blue-400/40 bg-blue-500/20' : 'border-white/10 bg-white/5'} flex items-center justify-center font-mono text-xl font-black ${isMoving ? 'text-blue-400 shadow-[inset_0_0_15px_rgba(59,130,246,0.3)]' : 'text-white'}`}>
-                    {isMoving ? engineState.targetFloor : engineState.currentFloor}
+                    {isMoving ? displayState.targetFloor : displayState.currentFloor}
                  </div>
               </div>
               <div className="w-2 h-10 rounded-full bg-blue-500/20 border border-blue-500/50 flex flex-col justify-between p-0.5">
@@ -306,10 +326,10 @@ export default function ElevatorDispatchExhibit() {
             {/* Buttons attached to shaft */}
             <div className="absolute -left-7 top-0 bottom-0 flex flex-col justify-between py-6 z-50 pointer-events-auto">
               {FLOORS.map(floor => {
-                const isCurrentTarget = floor === engineState.targetFloor;
-                const isCurrentIdle = floor === engineState.currentFloor && !isMoving && !engineState.targetFloor;
-                const isQueued = engineState.queue.some(r => r.floor === floor);
-                const isDisabled = isQueued || isCurrentTarget || isCurrentIdle || isProcessing;
+                const isCurrentTarget = floor === displayState.targetFloor;
+                const isCurrentIdle = floor === displayState.currentFloor && !isMoving && !displayState.targetFloor;
+                const isQueued = displayState.queue.some(r => r.floor === floor);
+                const isDisabled = isQueued || isCurrentTarget || isCurrentIdle || isProcessing || traceReplay.isReplaying;
 
                 return (
                   <button
@@ -337,27 +357,28 @@ export default function ElevatorDispatchExhibit() {
           <div className="mt-12 flex items-center justify-center gap-8 px-8 py-3.5 rounded-full bg-white/[0.02] border border-white/5 backdrop-blur-md">
              <div className="flex items-center gap-3">
                <span className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Current</span>
-               <span className="text-xs font-mono font-bold text-white">{engineState.currentFloor}</span>
+               <span className="text-xs font-mono font-bold text-white">{displayState.currentFloor}</span>
              </div>
              <div className="w-px h-4 bg-white/10" />
              <div className="flex items-center gap-3">
                <span className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Target</span>
-               <span className="text-xs font-mono font-bold text-blue-400">{engineState.targetFloor || '--'}</span>
+               <span className="text-xs font-mono font-bold text-blue-400">{displayState.targetFloor || '--'}</span>
              </div>
              <div className="w-px h-4 bg-white/10" />
              <div className="flex items-center gap-3">
                <span className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Queue</span>
-               <span className="text-xs font-mono font-bold text-white">{engineState.queue.length}</span>
+               <span className="text-xs font-mono font-bold text-white">{displayState.queue.length}</span>
              </div>
              <div className="w-px h-4 bg-white/10" />
              <div className="flex items-center gap-3">
                <span className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Completed</span>
-               <span className="text-xs font-mono font-bold text-emerald-400">{engineState.completedRequests}</span>
+               <span className="text-xs font-mono font-bold text-emerald-400">{displayState.completedRequests}</span>
              </div>
           </div>
         </GlassPanel>
       }
       hud={
+        <>
         <GlassPanel intensity="medium" className="p-6 mt-6 mb-6">
           <div className="flex items-center justify-between mb-6">
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">Simulation Brain</span>
@@ -367,11 +388,11 @@ export default function ElevatorDispatchExhibit() {
           <div className="grid grid-cols-2 gap-4 mb-6">
              <div className="bg-white/[0.02] border border-white/5 rounded-lg p-3">
                 <span className="text-[9px] font-black uppercase tracking-widest text-neutral-600 block mb-1">Algorithm</span>
-                <span className="text-xs font-mono font-bold text-blue-400 uppercase">{engineState.algorithm}</span>
+                <span className="text-xs font-mono font-bold text-blue-400 uppercase">{displayState.algorithm}</span>
              </div>
              <div className="bg-white/[0.02] border border-white/5 rounded-lg p-3">
                 <span className="text-[9px] font-black uppercase tracking-widest text-neutral-600 block mb-1">System State</span>
-                <span className="text-xs font-mono font-bold text-white uppercase">{isMoving ? 'In Transit' : isProcessing ? 'Computing' : engineState.direction !== 'idle' ? 'Dispatching' : 'Idle'}</span>
+                <span className="text-xs font-mono font-bold text-white uppercase">{isMoving ? 'In Transit' : isProcessing ? 'Computing' : displayState.direction !== 'idle' ? 'Dispatching' : 'Idle'}</span>
              </div>
           </div>
 
@@ -382,7 +403,7 @@ export default function ElevatorDispatchExhibit() {
                    {[
                      { label: 'REQUEST_FLOOR', active: activeLines.includes(3) },
                      { label: 'STEP', active: activeLines.includes(7) || activeLines.includes(8) },
-                     { label: 'TARGET_LOCKED', active: isMoving && engineState.targetFloor !== null },
+                     { label: 'TARGET_LOCKED', active: isMoving && displayState.targetFloor !== null },
                      { label: 'ARRIVE_AT_TARGET', active: activeLines.includes(12) }
                    ].map((step, i) => (
                      <div key={i} className="flex items-center gap-3 relative">
@@ -408,6 +429,8 @@ export default function ElevatorDispatchExhibit() {
              </div>
           </div>
         </GlassPanel>
+        <TraceReplayPanel {...traceReplay} />
+        </>
       }
       logic={
         <GlassPanel intensity="medium" className="flex flex-col flex-1 h-full min-h-[500px]">
@@ -445,11 +468,11 @@ export default function ElevatorDispatchExhibit() {
               <div className="pt-2 border-t border-white/5">
                  <div className="flex items-center justify-between mb-4">
                     <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">API Queue Buffer</span>
-                    <span className="text-[10px] font-mono text-blue-500 font-bold">{engineState.queue.length} Pending</span>
+                    <span className="text-[10px] font-mono text-blue-500 font-bold">{displayState.queue.length} Pending</span>
                  </div>
                  <div className="space-y-2 max-h-[140px] overflow-y-auto pr-2">
                     <AnimatePresence>
-                      {engineState.queue.map((req, i) => (
+                      {displayState.queue.map((req, i) => (
                         <motion.div 
                           key={req.floor}
                           initial={{ opacity: 0, height: 0 }}
@@ -462,7 +485,7 @@ export default function ElevatorDispatchExhibit() {
                         </motion.div>
                       ))}
                     </AnimatePresence>
-                    {engineState.queue.length === 0 && (
+                    {displayState.queue.length === 0 && (
                       <div className="flex flex-col items-center justify-center py-6 rounded-lg bg-white/[0.01] border border-white/5 border-dashed">
                         <div className="w-6 h-6 rounded-full bg-white/[0.02] flex items-center justify-center mb-2">
                           <div className="w-1.5 h-1.5 rounded-full bg-neutral-600 animate-pulse" />
@@ -480,7 +503,7 @@ export default function ElevatorDispatchExhibit() {
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500 mb-4 block">Engine Logic Integration</span>
               <div className="font-mono text-[11px] bg-[#020202] p-4 rounded-xl border border-white/5 shadow-inner">
                 {[
-                  `const algorithm = '${engineState.algorithm}';`,
+                  `const algorithm = '${displayState.algorithm}';`,
                   "",
                   "async function requestFloor(floor) {",
                   "  await api.post('/step', { type: 'REQUEST_FLOOR', floor });",

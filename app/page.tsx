@@ -8,8 +8,16 @@ import { GlassPanel } from "./components/ui/GlassPanel";
 import { Badge } from "./components/ui/Badge";
 
 const ParticleField = () => {
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none style={{ willChange: 'transform' }}">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ willChange: 'transform' }}>
       {[...Array(20)].map((_, i) => (
         <motion.div
           key={i}
